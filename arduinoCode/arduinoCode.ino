@@ -6,49 +6,75 @@
 #include <Adafruit_LIS3DH.h>
 #include <Adafruit_Sensor.h>
 
-#define LIS3DH_CLK 13
-#define LIS3DH_MISO 12
-#define LIS3DH_MOSI 11
-#define LIS3DH_CS 10
+#define LIS3DH_CLK 22 //SCL pin
+#define LIS3DH_MISO 24 //SDO pin
+#define LIS3DH_MOSI 26 //SDA pin
+#define LIS3DH_CS 28 //CS pin
 Adafruit_LIS3DH lis = Adafruit_LIS3DH(LIS3DH_CS, LIS3DH_MOSI, LIS3DH_MISO, LIS3DH_CLK);
 
-int DOUT = 2;
-int CLK = 3;
-double location1[] = {5, 0, 0};
+//cell a
+int DOUT_A = 14;
+int CLK_A = 15;
+double location_A[] = {5, 0, 0};
 double totalForce;
-coordinates scale1;
-int DOUT2 = 6;
-int CLK2 = 7;
-double location2[] = {-5, 0, 0};
-coordinates scale2;
+coordinates scale_A;
+//cell b
+int DOUT_B = 16;
+int CLK_B = 17;
+double location_B[] = {-5, 0, 0};
+coordinates scale_B;
+//cell c
+int DOUT_C = 18;
+int CLK_C = 19;
+double location_C[] = {5, 1, 0};
+coordinates scale_C;
+//cell d
+int DOUT_D = 20;
+int CLK_D = 21;
+double location_D[] = {-5, 1, 0};
+coordinates scale_D;
+
 coordinates correction;
-double forces[2];
-coordinates locations[2];
+double forces[4];
+coordinates locations[4];
 double omega = 0.104719755;
 
-HX711 loadCell_1;
-double calibration_1 = 1100;
-double calibration_2 = 1089;
-HX711 loadCell_2;
+HX711 loadCell_A;
+HX711 loadCell_B;
+HX711 loadCell_C;
+HX711 loadCell_D;
+double calibration_A = 145000;
+double calibration_B = 145000;
+double calibration_C = 145000;
+double calibration_D = 145000;
 double sampleTime = 0.5;
 
 void setup() {
   Serial.begin(9600);
   initializeAccelerometer(lis);
-  setupScales(loadCell_1, DOUT, CLK, calibration_1);
-  scale1 = coordFromArray(location1);
-  setupScales(loadCell_2, DOUT2, CLK2, calibration_2);
-  scale2 = coordFromArray(location2);
-  locations[0] = scale1; locations[1] = scale2;
+  
+  setupScales(loadCell_A, DOUT_A, CLK_A, calibration_A);
+  scale_A = coordFromArray(location_A);
+  
+  setupScales(loadCell_B, DOUT_B, CLK_B, calibration_B);
+  scale_B = coordFromArray(location_B);
+  
+  setupScales(loadCell_C, DOUT_C, CLK_C, calibration_C);
+  scale_C = coordFromArray(location_C);
+  
+  setupScales(loadCell_D, DOUT_D, CLK_D, calibration_D);
+  scale_D = coordFromArray(location_D);
+  
+  locations[0] = scale_A; locations[1] = scale_B; locations[2] = scale_C; locations[3] = scale_D;
 }
 
 void initializeAccelerometer(Adafruit_LIS3DH &lis)
 {
-  while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
+  while (!Serial) delay(1);     // will pause Zero, Leonardo, etc until serial console opens
 
   Serial.println("LIS3DH test!");
 
-  if (! lis.begin(0x18)) {   // change this to 0x19 for alternative i2c address
+  if (! lis.begin(0x19)) {   // change this to 0x19 for alternative i2c address
     Serial.println("Couldnt start");
     while (1) yield();
   }
@@ -82,14 +108,25 @@ void loop() {
     printAccelerometer(event); 
     double radius = radiusOfRotation(omega, event.acceleration.x);
     Serial.print("Radius of rotation: "); Serial.print(radius);
-    forces[0] = getLoading(loadCell_1);
-    Serial.print("\nLoading on scale 1: "); Serial.print(forces[0]);
-    forces[1] = getLoading(loadCell_2);
-    Serial.print("\nLoading on scale 2: "); Serial.print(forces[1]);
-    Serial.print("\n\nLocation of cell 1: ");
+    
+    forces[0] = getLoading(loadCell_A);
+    Serial.print("\nLoading on scale A: "); Serial.print(forces[0]);
+    forces[1] = getLoading(loadCell_B);
+    Serial.print("\nLoading on scale B: "); Serial.print(forces[1]);
+    forces[2] = getLoading(loadCell_C);
+    Serial.print("\nLoading on scale C: "); Serial.print(forces[2]);
+    forces[3] = getLoading(loadCell_D);
+    Serial.print("\nLoading on scale D: "); Serial.print(forces[3]);
+    
+    Serial.print("\n\nLocation of cell A: ");
     printCoord(locations[0], false);
-    Serial.print("\nLocation of cell 2: ");
+    Serial.print("\nLocation of cell B: ");
     printCoord(locations[1], false);
+    Serial.print("\n\nLocation of cell C: ");
+    printCoord(locations[2], false);
+    Serial.print("\nLocation of cell D: ");
+    printCoord(locations[3], false);
+    
     com = comLocation(forces, locations, 2);
     Serial.print("\nLocation of COM: ");
     printCoord(com, false);
